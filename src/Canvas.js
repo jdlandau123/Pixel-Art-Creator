@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 export function Canvas(props) {
-    const { canvasRef, canvasWidth, canvasHeight, pixelSize, selectedColor, resetCanvas } = props;
+    const { canvasRef, canvasWidth, canvasHeight, pixelSize, selectedColor, resetCanvas, handleZoom } = props;
 
     const [width, setWidth] = useState();
     const [height, setHeight] = useState();
