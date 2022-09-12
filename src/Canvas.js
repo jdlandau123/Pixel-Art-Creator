@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 
 export function Canvas(props) {
-    const { canvasRef, canvasWidth, canvasHeight, pixelSize, selectedColor, resetCanvas, handleZoom } = props;
+    const { canvasRef, canvasWidth, canvasHeight, pixelSize, selectedColor, resetCanvas, handleZoom,
+        getColorAtPixel, isGetColor } = props;
 
     const [width, setWidth] = useState();
     const [height, setHeight] = useState();
@@ -26,6 +27,10 @@ export function Canvas(props) {
         const canvasBoundary = e.target.getBoundingClientRect();
         const x = Math.floor((e.clientX - canvasBoundary.left) / pixelSize) * pixelSize;
         const y = Math.floor((e.clientY - canvasBoundary.top) / pixelSize) * pixelSize;
+        if (isGetColor) {
+            getColorAtPixel(x, y, context);
+            return;
+        }
         context.fillStyle = selectedColor;
         context.fillRect(x, y, pixelSize, pixelSize);
     }
@@ -38,7 +43,7 @@ export function Canvas(props) {
 
     const canvasStyles = {
         border: '1pt solid black',
-        cursor: isHover ? 'pointer' : null
+        cursor: isHover ? 'crosshair' : null
     }
 
     return <canvas ref={canvasRef} style={canvasStyles} width={width} height={height}
