@@ -22,6 +22,8 @@ function App() {
     '#000000', '#413E3D', '#CF2525', '#13D3E7', '#1C3ADE', '#33EA16', '#1A9029', '#E9AF1C', '#ECEE19'
   ]);
   const [isGetColor, setIsGetColor] = useState(false);
+  const [brushSize, setBrushSize] = useState(1);
+  const [paintBucketActive, setPaintBucketActive] = useState(false);
 
   const canvasRef = useRef();
 
@@ -57,6 +59,51 @@ function App() {
     const pixelHex = rgbToHex(pixelData[0], pixelData[1], pixelData[2]);
     setSelectedColor(pixelHex);
     setIsGetColor(false);
+  }
+
+  const findPaintBucketExtent = (clickedPixelHex, x, y, context) => {
+    const cellsToFill = [];
+    const directions = [
+      {x: 'ix += pixelSize', y: 'iy += pixelSize'},
+      {x: 'ix -= pixelSize', y: 'iy += pixelSize'},
+      {x: 'ix += pixelSize', y: 'iy -= pixelSize'},
+      {x: 'ix -= pixelSize', y: 'iy -= pixelSize'}
+    ]
+    directions.forEach((dir) => {
+      // I know about the dangers of useing eval(), but in this case its input is restricted to only the values defined above which
+      // should make it safe to use for this implementation 
+      for (let ix = x; (ix < canvasWidth * pixelSize && ix >= 0); eval(dir.x)) {
+        for (let iy = y; (iy < canvasHeight * pixelSize && iy >= 0); eval(dir.y)) {
+          const data = context.getImageData(ix, iy, 1, 1).data;
+          const pixelHex = rgbToHex(data[0], data[1], data[2]);
+          if (pixelHex === clickedPixelHex) {
+            cellsToFill.push({x: ix, y: iy});
+          } else {
+            break;
+          }
+        }
+        const data = context.getImageData(ix, y, 1, 1).data;
+        const pixelHex = rgbToHex(data[0], data[1], data[2]);
+        if (pixelHex === clickedPixelHex) {
+          cellsToFill.push({x: ix, y: y});
+        } else {
+          break;
+        }
+      }
+    })
+
+    return cellsToFill;
+  }
+
+  const handlePaintBucket = (x, y, context) => {
+    const pixelData = context.getImageData(x, y, 1, 1).data;
+    const clickedPixelHex = rgbToHex(pixelData[0], pixelData[1], pixelData[2]);
+    const cellsToFill = findPaintBucketExtent(clickedPixelHex, x, y, context);
+    cellsToFill.forEach((cell) => {
+      context.fillStyle = selectedColor;
+      context.fillRect(cell.x, cell.y, pixelSize, pixelSize);
+    })
+    setPaintBucketActive(false);
   }
 
   // TODO: Need a way to make this update canvas without resetting the drawing
@@ -101,12 +148,20 @@ function App() {
         </div>
         {showGrid && <Grid canvasHeight={canvasHeight} canvasWidth={canvasWidth} pixelSize={pixelSize} selectedColor={selectedColor} />}
         <Canvas canvasRef={canvasRef} canvasHeight={canvasHeight} canvasWidth={canvasWidth} pixelSize={pixelSize}
-          selectedColor={selectedColor} resetCanvas={resetCanvas} getColorAtPixel={getColorAtPixel} isGetColor={isGetColor} />
+          selectedColor={selectedColor} resetCanvas={resetCanvas} getColorAtPixel={getColorAtPixel} isGetColor={isGetColor}
+          brushSize={brushSize} handlePaintBucket={handlePaintBucket} paintBucketActive={paintBucketActive} />
         <div className='sidebar' id='rightSidebar' style={{right: '0'}}>
           <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', rowGap: '20px'}}>
+            <div style={{display: 'flex', justifyContent: 'space-around'}}>
+                <label for='brushSizeInput'>Brush Size:</label>
+                <input className='textInput' type='number' step='1' id='brushSizeInput' defaultValue='1' min='1' style={{width: '25%'}}
+                  onChange={(e) => setBrushSize(e.target.value)} />
+            </div>
             <img className='icons' src="/eraser-icon.svg" onClick={() => setSelectedColor('#FFFFFF')}></img>
-            <img className='icons' src="/color-dropper-icon.svg" onClick={() => setIsGetColor(true)}
+            <img className='icons' src="/color-dropper-icon.svg" onClick={() => setIsGetColor(!isGetColor)}
               style={{border: `${isGetColor ? '1.5pt solid black' : 'none'}`}}></img>
+            <img className='icons' src="/paint-bucket-icon.svg" onClick={() => {setPaintBucketActive(!paintBucketActive)}}
+              style={{border: `${paintBucketActive ? '1.5pt solid black' : 'none'}`}}></img>
           </div>
         </div>
       </div>}

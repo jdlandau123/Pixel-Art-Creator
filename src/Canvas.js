@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 export function Canvas(props) {
     const { canvasRef, canvasWidth, canvasHeight, pixelSize, selectedColor, resetCanvas, handleZoom,
-        getColorAtPixel, isGetColor } = props;
+        getColorAtPixel, isGetColor, brushSize, handlePaintBucket, paintBucketActive } = props;
 
     const [width, setWidth] = useState();
     const [height, setHeight] = useState();
@@ -31,8 +31,12 @@ export function Canvas(props) {
             getColorAtPixel(x, y, context);
             return;
         }
+        if (paintBucketActive) {
+            handlePaintBucket(x, y, context);
+            return;
+        }
         context.fillStyle = selectedColor;
-        context.fillRect(x, y, pixelSize, pixelSize);
+        context.fillRect(x, y, pixelSize * brushSize, pixelSize * brushSize);
     }
 
     const draw = (e) => {
