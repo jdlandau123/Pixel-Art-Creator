@@ -6,9 +6,14 @@ import Grid from './Grid';
 import SetupForm from './SetupForm';
 import ColorSelector from './ColorSelector';
 import { HexColorPicker } from "react-colorful";
+import axios from 'axios';
 
 
 function App() {
+  const [userId, setUserId] = useState();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [canvasWidth, setCanvasWidth] = useState(32);
   const [canvasHeight, setCanvasHeight] = useState(32);
@@ -24,8 +29,52 @@ function App() {
   const [isGetColor, setIsGetColor] = useState(false);
   const [brushSize, setBrushSize] = useState(1);
   const [paintBucketActive, setPaintBucketActive] = useState(false);
+  const [loginError, setLoginError] = useState('');
 
   const canvasRef = useRef();
+
+  const login = (user, pass) => {
+    if (!user || !pass) {
+      setLoginError('Please enter a username and password');
+      return;
+    }
+    setUsername(user);
+    setPassword(pass);
+    axios.get(`${process.env.REACT_APP_API_ROOT}/users/${user}`, {
+      params : {
+        username: user
+      }
+    }).then((res) => {
+      if (res.data.length > 0 && res.data[0].password === pass) {
+        setIsLoggedIn(true);
+        setUserId(res.data[0].id);
+      } else {
+        setLoginError('Username or password incorrect');
+      }
+    })
+  }
+
+  const signUp = (user, pass) => {
+    if (!user || !pass) {
+      setLoginError('Please enter a username and password');
+      return;
+    }
+    setUsername(user);
+    setPassword(pass);
+    axios.post(`${process.env.REACT_APP_API_ROOT}/users`, {
+      username: user,
+      password: pass
+    }).then((res) => {
+      if (res.data.name === 'error') {
+        setLoginError('Username taken, please try a different one')
+        return;
+      } else {
+        setIsLoggedIn(true);
+        setUsername(user);
+        setPassword(pass);
+      }
+    })
+  }
 
   const createProject = (customWidth, customHeight, customPixelSize, customProjectName) => {
     setShowSetup(false);
@@ -33,6 +82,16 @@ function App() {
     setCanvasHeight(customHeight);
     setPixelSize(customPixelSize);
     setProjectName(customProjectName);
+
+    isLoggedIn && axios.post(`${process.env.REACT_APP_API_ROOT}/projects`, {
+      userid: userId,
+      projectName: projectName,
+      width: canvasWidth,
+      height: canvasHeight,
+      pixelSize: pixelSize
+    }).then((res) => {
+      console.log(res);
+    });
   }
 
   const handleReset = () => {
@@ -119,8 +178,10 @@ function App() {
 
   return (
     <div className="App">
-      <h1>Pixel Art Creator</h1>
-      {showSetup && <SetupForm createProject={createProject} />}
+      <h1>Pixio</h1>
+      {isLoggedIn && <p>User: {username}</p>}
+      {showSetup && <SetupForm createProject={createProject} login={login} isLoggedIn={isLoggedIn} loginError={loginError}
+                      signUp={signUp} />}
       {!showSetup && <div>
         <div className='sidebar' id='leftSidebar' style={{left: '0'}}>
           <p>Project: {projectName}</p>
